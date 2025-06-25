@@ -8,7 +8,7 @@ while True:
     data = {"temperature": temp, "humidity": humidity}
 
     try:
-        response = requests.post("http://127.0.0.1:5000/sensor", json=data)
+        response = requests.post("https://smart-home-monitor.onrender.com", json=data)
         print(f"Sent: {data}, Status: {response.status_code}")
     except Exception as e:
         print(f"Failed to send: {e}")
