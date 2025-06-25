@@ -1,0 +1,9 @@
+services:
+  - type: worker
+    name: sensor-simulator
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python sensor_simulator.py"
+    envVars:
+      - key: TARGET_URL
+        value: https://smart-home-monitor.onrender.com
