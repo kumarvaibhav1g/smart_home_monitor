@@ -2,61 +2,132 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Smart Home Sensor Dashboard</title>
+    <title>Smart Home Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --bg-light: #f5f7fa;
+            --bg-dark: #1e1e2f;
+            --text-light: #333;
+            --text-dark: #f5f5f5;
+            --card-light: #fff;
+            --card-dark: #2a2a40;
+        }
+
         body {
+            margin: 0;
             font-family: 'Segoe UI', sans-serif;
-            background: #f5f7fa;
-            text-align: center;
-            padding: 30px;
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            transition: 0.4s;
         }
 
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
+        .dark-mode {
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
         }
 
-        .card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        .chart-container {
+            background: var(--card-light);
             padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 900px;
+            margin-bottom: 20px;
+            transition: 0.4s;
+        }
+
+        .dark-mode .chart-container {
+            background: var(--card-dark);
         }
 
         canvas {
-            margin-top: 20px;
+            max-width: 100%;
+        }
+
+        footer {
+            margin-top: 40px;
+            color: #777;
+            font-size: 14px;
+        }
+
+        button {
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .alert {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .alert-temp {
+            background-color: #ffcccc;
+            color: #990000;
+        }
+
+        .alert-humidity {
+            background-color: #cce5ff;
+            color: #004085;
         }
     </style>
 </head>
 <body>
-    <h1>Smart Home Sensor Dashboard</h1>
-    <div class="card">
-        <canvas id="chart" width="700" height="350"></canvas>
+    <h1>Smart Home Live Sensor Dashboard</h1>
+    
+    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+
+    <div id="alerts"></div>
+
+    <div class="chart-container">
+        <canvas id="sensorChart"></canvas>
     </div>
 
+    <footer>
+        Built with Flask • Real-time updates every 2 seconds
+    </footer>
+
     <script>
-        const ctx = document.getElementById('chart').getContext('2d');
-        const chart = new Chart(ctx, {
+        let isDarkMode = false;
+
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+            isDarkMode = !isDarkMode;
+        }
+
+        const ctx = document.getElementById('sensorChart').getContext('2d');
+        const sensorChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
                 datasets: [
                     {
                         label: 'Temperature (°C)',
-                        borderColor: '#e74c3c',
+                        borderColor: '#ff4e50',
+                        backgroundColor: 'rgba(255, 78, 80, 0.1)',
                         data: [],
-                        fill: false,
-                        tension: 0.3
+                        fill: true,
+                        tension: 0.4,
                     },
                     {
                         label: 'Humidity (%)',
-                        borderColor: '#3498db',
+                        borderColor: '#4e89ff',
+                        backgroundColor: 'rgba(78, 137, 255, 0.1)',
                         data: [],
-                        fill: false,
-                        tension: 0.3
+                        fill: true,
+                        tension: 0.4,
                     }
                 ]
             },
@@ -71,32 +142,54 @@
                         }
                     },
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Sensor Values'
+                        }
                     }
                 }
             }
         });
 
+        function showAlert(type, message) {
+            const alertBox = document.getElementById("alerts");
+            alertBox.innerHTML = `
+                <div class="alert ${type === 'temp' ? 'alert-temp' : 'alert-humidity'}">
+                    ${message}
+                </div>
+            `;
+            setTimeout(() => {
+                alertBox.innerHTML = '';
+            }, 4000);
+        }
+
         function fetchData() {
-            // Simulate sensor data
-            fetch('/simulate')
-                .then(() => fetch('/data'))
-                .then(res => res.json())
+            fetch('/data')
+                .then(response => response.json())
                 .then(data => {
                     const now = new Date().toLocaleTimeString();
-                    chart.data.labels.push(now);
-                    chart.data.datasets[0].data.push(data.temperature);
-                    chart.data.datasets[1].data.push(data.humidity);
+                    sensorChart.data.labels.push(now);
+                    sensorChart.data.datasets[0].data.push(data.temperature);
+                    sensorChart.data.datasets[1].data.push(data.humidity);
 
-                    if (chart.data.labels.length > 20) {
-                        chart.data.labels.shift();
-                        chart.data.datasets[0].data.shift();
-                        chart.data.datasets[1].data.shift();
+                    if (sensorChart.data.labels.length > 20) {
+                        sensorChart.data.labels.shift();
+                        sensorChart.data.datasets[0].data.shift();
+                        sensorChart.data.datasets[1].data.shift();
                     }
 
-                    chart.update();
+                    sensorChart.update();
+
+                    if (data.temperature > 28) {
+                        showAlert('temp', `⚠️ High Temperature: ${data.temperature}°C`);
+                    }
+
+                    if (data.humidity < 45) {
+                        showAlert('humidity', `⚠️ Low Humidity: ${data.humidity}%`);
+                    }
                 })
-                .catch(err => console.error("Error fetching data:", err));
+                .catch(err => console.error("Fetch error:", err));
         }
 
         setInterval(fetchData, 2000);
